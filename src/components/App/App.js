@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Notiflix from 'notiflix';
 import GlobalStyles from 'GlobalStyles';
 import { nanoid } from 'nanoid';
