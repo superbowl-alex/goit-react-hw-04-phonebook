@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { useState, useEffect } from 'react';
 import Notiflix from 'notiflix';
 import GlobalStyles from 'GlobalStyles';
 import { nanoid } from 'nanoid';
@@ -6,6 +6,7 @@ import ContactForm from '../ContactForm';
 import Filter from '../Filter';
 import ContactList from '../ContactList';
 import Notification from '../Notification';
+import { useLocalStorage } from 'hooks/useLocalStorage';
 import {
   Container,
   WrapForms,
@@ -27,102 +28,67 @@ Notiflix.Notify.init({
   },
 });
 
-export default class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export default function App() {
+  const [contacts, setContacts] = useLocalStorage('contacts', []);
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
-    try {
-      const contacts = JSON.parse(localStorage.getItem('contacts'));
-      if (contacts) {
-        this.setState({
-          contacts: contacts,
-        });
-      }
-    } catch (error) {
-      console.error('Get state error: ', error.message);
-    }
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      try {
-        localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-      } catch (error) {
-        console.error('Set state error: ', error.message);
-      }
-    }
-  }
-
-  findContactByName = name => {
-    const { contacts } = this.state;
+  const findContactByName = name => {
     return contacts.find(item => item.name.toLowerCase() === name);
   };
 
-  formSubmitHandler = data => {
+  const formSubmitHandler = data => {
     const { name, number } = data;
     const normalizedName = name.toLowerCase();
-    if (this.findContactByName(normalizedName)) {
+    if (findContactByName(normalizedName)) {
       Notiflix.Notify.warning(`${name} is already in contacts`);
       return;
     }
-    this.addContact(name, number);
+    addContact(name, number);
   };
 
-  addContact = (name, number) => {
+  const addContact = (name, number) => {
     const contact = {
       id: nanoid(),
       name,
       number,
     };
-    this.setState(({ contacts }) => ({
-      contacts: [contact, ...contacts],
-    }));
+    setContacts(contacts => [contact, ...contacts]);
   };
 
-  deleteContact = id => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== id),
-    }));
+  const deleteContact = id => {
+    setContacts(contacts => contacts.filter(contact => contact.id !== id));
   };
 
-  getVisibleContacts = () => {
-    const { contacts, filter } = this.state;
+  const getVisibleContacts = () => {
     const normalizedFilter = filter.toLowerCase();
     return contacts.filter(({ name }) =>
       name.toLowerCase().includes(normalizedFilter)
     );
   };
 
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
+  const changeFilter = e => {
+    setFilter(e.currentTarget.value);
   };
 
-  render() {
-    const { contacts, filter } = this.state;
-    const filteredContacts = this.getVisibleContacts();
-    return (
-      <Container>
-        <GlobalStyles />
-        <WrapForms>
-          <FormTitle>Phonebook</FormTitle>
-          <ContactForm onSubmit={this.formSubmitHandler} />
-          <Filter filter={filter} onChange={this.changeFilter} />
-        </WrapForms>
-        <WrapList>
-          <ListTitle>Contacts</ListTitle>
-          {contacts.length > 0 ? (
-            <ContactList
-              contacts={filteredContacts}
-              onDeleteContact={this.deleteContact}
-            />
-          ) : (
-            <Notification message="There is no contact in Phonebook" />
-          )}
-        </WrapList>
-      </Container>
-    );
-  }
+  return (
+    <Container>
+      <GlobalStyles />
+      <WrapForms>
+        <FormTitle>Phonebook</FormTitle>
+        <ContactForm onSubmit={formSubmitHandler} />
+        <Filter filter={filter} onChange={changeFilter} />
+      </WrapForms>
+      <WrapList>
+        <ListTitle>Contacts</ListTitle>
+        {contacts.length > 0 ? (
+          <ContactList
+            contacts={getVisibleContacts()}
+            onDeleteContact={deleteContact}
+          />
+        ) : (
+          <Notification message="There is no contact in Phonebook" />
+        )}
+      </WrapList>
+    </Container>
+  );
 }
